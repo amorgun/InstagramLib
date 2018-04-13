@@ -134,13 +134,15 @@ class Agent:
         if not isinstance(settings, dict):
             raise TypeError("'settings' must be dict type")
         if isinstance(obj, Account):
-            query = "https://www.instagram.com/{0}/?__a=1".format(obj.login)
+            query = "https://www.instagram.com/{0}".format(obj.login)
         elif isinstance(obj, Media):
-            query = "https://www.instagram.com/p/{0}?__a=1".format(obj.code)
+            query = "https://www.instagram.com/p/{0}".format(obj.code)
         elif isinstance(obj, Location):
+            raise NotImplementedError
             query = "https://www.instagram.com/explore/locations/{0}/?__a=1".format(
                 obj.id)
         elif isinstance(obj, Tag):
+            raise NotImplementedError
             query = "https://www.instagram.com/explore/tags/{0}/?__a=1".format(
                 obj.name)
         else:
@@ -148,10 +150,11 @@ class Agent:
 
         # Request
         response = self.__send_get_request__(query, **settings)
+        api_response = self.__extract_api_response(response.text)
 
         # Parsing info
         try:
-            obj.__setDataFromJSON__(response.json())
+            obj.__setDataFromJSON__(api_response)
         except (ValueError, KeyError):
             raise UnexpectedResponse(response.url, response.text)
 
@@ -397,6 +400,15 @@ class Agent:
                                                                        **kwargs)
                 else:
                     raise InternetException(e)
+
+    def __extract_api_response(self, html):
+        # Mwahaha let's parse html using regular expressions
+        import re, json
+        resp_find = re.findall(
+            '<script type="text/javascript">window._sharedData = (.*?);</script>',
+            html)
+        resp_json = json.loads(resp_find[0])['entry_data']['ProfilePage'][0]
+        return resp_json
 
 
 # Account class
